@@ -1,0 +1,79 @@
+# ========================================
+# ARQUIVOS DE SEGURANÇA - NUNCA ENVIAR
+# ========================================
+.env
+*.env
+
+# Streamlit Secrets (use Streamlit Cloud Secrets Manager)
+.streamlit/secrets.toml
+.streamlit/
+STREAMLIT_SECRETS.txt
+
+# ========================================
+# PYTHON
+# ========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ========================================
+# AMBIENTES VIRTUAIS
+# ========================================
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# ========================================
+# BANCO DE DADOS
+# ========================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# IDE / EDITOR
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ========================================
+# STREAMLIT
+# ========================================
+.streamlit/secrets.toml
+
+# ========================================
+# LOGS
+# ========================================
+*.log
+logs/
+
+# ========================================
+# ARQUIVOS TEMPORÁRIOS
+# ========================================
+*.tmp
+*.bak
+*.backup
