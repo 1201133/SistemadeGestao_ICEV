@@ -3,10 +3,7 @@ Página de Newsletter e Comunicados.
 """
 import base64
 import io
-import smtplib
 from datetime import date, datetime
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import List, Tuple
 
 import requests
@@ -30,15 +27,8 @@ from config import (
     JSPELL_API_KEY,
     JSPELL_API_URL,
     JSPELL_TIMEOUT_SECONDS,
-    SMTP_ENABLED,
-    SMTP_FROM_EMAIL,
-    SMTP_FROM_NAME,
-    SMTP_HOST,
-    SMTP_PASSWORD,
-    SMTP_PORT,
-    SMTP_USE_TLS,
-    SMTP_USER,
 )
+from email_service import enviar_email_html
 from database_newsletter import (
     criar_newsletter,
     atualizar_newsletter,
@@ -271,31 +261,9 @@ def _gerar_html_email(
 
 
 def _enviar_email_newsletter(destinatarios: List[str], assunto: str, html: str) -> Tuple[bool, str]:
-    """Envia a newsletter por SMTP."""
-    if not SMTP_ENABLED:
-        return False, "Envio de e-mail desativado. Configure SMTP_ENABLED=true no .env."
-
-    if not all([SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL]):
-        return False, "Configuração SMTP incompleta. Verifique SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM_EMAIL."
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = assunto
-    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-    msg["To"] = ", ".join(destinatarios)
-
+    """Envia a newsletter usando o serviço SMTP compartilhado."""
     texto_plano = "Comunicado da igreja. Visualize este e-mail em modo HTML para melhor experiência."
-    msg.attach(MIMEText(texto_plano, "plain", "utf-8"))
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-            if SMTP_USE_TLS:
-                server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM_EMAIL, destinatarios, msg.as_string())
-        return True, f"E-mail enviado para {len(destinatarios)} destinatário(s)."
-    except Exception as e:
-        return False, f"Falha ao enviar e-mail: {e}"
+    return enviar_email_html(destinatarios, assunto, html, texto_plano)
 
 
 def _gerar_pdf_newsletter(
@@ -433,6 +401,19 @@ def exibir_pagina_newsletter():
     aba_criar, aba_historico = st.tabs(["✍️ Criar e Publicar", "📚 Histórico"])
 
     with aba_criar:
+        mensagem_newsletter = st.session_state.pop("newsletter_flash", None)
+        if mensagem_newsletter:
+            tipo_mensagem = mensagem_newsletter.get("tipo", "info")
+            texto_mensagem = mensagem_newsletter.get("texto", "")
+            if tipo_mensagem == "success":
+                st.success(texto_mensagem)
+            elif tipo_mensagem == "warning":
+                st.warning(texto_mensagem)
+            elif tipo_mensagem == "error":
+                st.error(texto_mensagem)
+            else:
+                st.info(texto_mensagem)
+
         # Estado do formulário para permitir limpeza automática após publicar
         if "newsletter_reset_form" not in st.session_state:
             st.session_state["newsletter_reset_form"] = False
@@ -577,6 +558,7 @@ def exibir_pagina_newsletter():
 
             msg_sucesso = f"Comunicado publicado com sucesso. ID: {newsletter_id}"
             falha_envio_email = False
+            mensagem_falha_email = ""
 
             if enviar_email:
                 html = _gerar_html_email(
@@ -593,7 +575,7 @@ def exibir_pagina_newsletter():
                     msg_sucesso = f"{msg_sucesso} {msg}"
                 else:
                     falha_envio_email = True
-                    st.error(msg)
+                    mensagem_falha_email = msg
 
             pdf_bytes = _gerar_pdf_newsletter(
                 titulo=titulo,
@@ -603,11 +585,17 @@ def exibir_pagina_newsletter():
             )
             st.session_state["newsletter_pdf_ultimo"] = pdf_bytes
             st.session_state["newsletter_pdf_nome"] = f"newsletter_{newsletter_id}.pdf"
-            st.session_state["newsletter_reset_form"] = True
             if falha_envio_email:
-                st.warning(f"{msg_sucesso} O comunicado foi salvo, mas o e-mail não foi enviado. Campos limpos para nova publicação.")
+                st.session_state["newsletter_flash"] = {
+                    "tipo": "warning",
+                    "texto": f"{msg_sucesso} O comunicado foi salvo, mas o e-mail não foi enviado. Detalhe: {mensagem_falha_email}",
+                }
             else:
-                st.success(f"{msg_sucesso} Campos limpos para nova publicação.")
+                st.session_state["newsletter_reset_form"] = True
+                st.session_state["newsletter_flash"] = {
+                    "tipo": "success",
+                    "texto": f"{msg_sucesso} Campos limpos para nova publicação.",
+                }
             st.rerun()
 
         if st.session_state.get("newsletter_pdf_ultimo"):

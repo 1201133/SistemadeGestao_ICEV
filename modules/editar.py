@@ -22,6 +22,7 @@ def exibir_pagina_editar():
     nivel = st.session_state["nivel"]
     
     st.subheader("✏️ Editar Lançamentos")
+
     if nivel != "admin":
         st.info("Voce pode editar e excluir apenas os lancamentos criados por voce.")
     
@@ -178,6 +179,11 @@ def exibir_pagina_editar():
                 "Confirmo a exclusão permanente deste lançamento",
                 value=False
             )
+
+            # Exibe mensagens de sucesso após rerun abaixo dos botões.
+            mensagem_sucesso = st.session_state.pop("mensagem_sucesso_editar", None)
+            if mensagem_sucesso:
+                st.success(mensagem_sucesso)
             
             # ============================================
             # PROCESSAMENTO DAS AÇÕES
@@ -231,7 +237,7 @@ def exibir_pagina_editar():
                 )
                 
                 if sucesso:
-                    st.success("✅ Lançamento atualizado com sucesso!")
+                    st.session_state["mensagem_sucesso_editar"] = "✅ Os dados foram atualizados com sucesso!"
                     st.rerun()
                 else:
                     st.error("❌ Erro ao atualizar lançamento ou permissão insuficiente.")

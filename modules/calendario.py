@@ -1,24 +1,12 @@
 """
 Página de Calendário de Eventos.
 """
-import smtplib
 from datetime import date, datetime, time
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from typing import List, Tuple
 
 import streamlit as st
 
-from config import (
-    SMTP_ENABLED,
-    SMTP_FROM_EMAIL,
-    SMTP_FROM_NAME,
-    SMTP_HOST,
-    SMTP_PASSWORD,
-    SMTP_PORT,
-    SMTP_USE_TLS,
-    SMTP_USER,
-)
+from email_service import enviar_email_html
 from database_calendario import (
     atualizar_evento,
     criar_evento,
@@ -145,30 +133,8 @@ def _formatar_agenda_html(eventos: list, data_inicio: date, data_fim: date) -> s
 
 
 def _enviar_agenda_por_email(destinatarios: List[str], assunto: str, html: str) -> Tuple[bool, str]:
-    if not SMTP_ENABLED:
-        return False, "Envio de e-mail desativado. Configure SMTP_ENABLED=true no .env."
-
-    if not all([SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL]):
-        return False, "Configuração SMTP incompleta. Verifique SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM_EMAIL."
-
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = assunto
-    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-    msg["To"] = ", ".join(destinatarios)
-
     texto = "Agenda de eventos da igreja. Abra em HTML para melhor visualização."
-    msg.attach(MIMEText(texto, "plain", "utf-8"))
-    msg.attach(MIMEText(html, "html", "utf-8"))
-
-    try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
-            if SMTP_USE_TLS:
-                server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM_EMAIL, destinatarios, msg.as_string())
-        return True, f"Agenda enviada para {len(destinatarios)} destinatário(s)."
-    except Exception as e:
-        return False, f"Falha ao enviar agenda por e-mail: {e}"
+    return enviar_email_html(destinatarios, assunto, html, texto)
 
 
 def exibir_pagina_calendario() -> None:
