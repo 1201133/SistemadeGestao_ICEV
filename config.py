@@ -28,14 +28,10 @@ def get_secret(key, section=None):
             if section:
                 # Suporta formato TOML com seção, ex.: [passwords]
                 if section in st.secrets and key in st.secrets[section]:
-                    value = st.secrets[section][key]
-                    if value:
-                        return value
+                    return st.secrets[section][key]
             # Suporta chave no topo do secrets, sem seção
             if key in st.secrets:
-                value = st.secrets[key]
-                if value:
-                    return value
+                return st.secrets[key]
         except Exception as e:
             print(f"Erro ao acessar secret {key}: {e}")
 
@@ -153,13 +149,18 @@ def str_to_bool(value, default=False):
 
 
 SMTP_ENABLED = str_to_bool(get_secret("SMTP_ENABLED"), default=False)
-SMTP_HOST = get_secret("SMTP_HOST")
-SMTP_PORT = int(get_secret("SMTP_PORT") or 587)
-SMTP_USER = get_secret("SMTP_USER")
-SMTP_PASSWORD = get_secret("SMTP_PASSWORD")
-SMTP_FROM_NAME = get_secret("SMTP_FROM_NAME") or "Sistema de Dízimos e Ofertas"
-SMTP_FROM_EMAIL = get_secret("SMTP_FROM_EMAIL") or SMTP_USER
-SMTP_USE_TLS = str_to_bool(get_secret("SMTP_USE_TLS"), default=True)
+SMTP_HOST = get_secret("SMTP_HOST") or get_secret("SMTP_HOST", "smtp")
+SMTP_PORT = int((get_secret("SMTP_PORT") or get_secret("SMTP_PORT", "smtp") or 587))
+SMTP_USER = get_secret("SMTP_USER") or get_secret("SMTP_USER", "smtp")
+SMTP_PASSWORD = get_secret("SMTP_PASSWORD") or get_secret("SMTP_PASSWORD", "smtp")
+SMTP_FROM_NAME = (get_secret("SMTP_FROM_NAME") or get_secret("SMTP_FROM_NAME", "smtp") or "Sistema de Dízimos e Ofertas")
+SMTP_FROM_EMAIL = (get_secret("SMTP_FROM_EMAIL") or get_secret("SMTP_FROM_EMAIL", "smtp") or SMTP_USER)
+SMTP_USE_TLS = str_to_bool(get_secret("SMTP_USE_TLS") or get_secret("SMTP_USE_TLS", "smtp"), default=True)
+
+if get_secret("SMTP_ENABLED") is not None:
+    SMTP_ENABLED = str_to_bool(get_secret("SMTP_ENABLED"), default=False)
+else:
+    SMTP_ENABLED = str_to_bool(get_secret("SMTP_ENABLED", "smtp"), default=False)
 
 
 # ============================================
